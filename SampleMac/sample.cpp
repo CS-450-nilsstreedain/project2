@@ -181,7 +181,8 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
-GLuint	BoxList;				// object display list
+GLuint  HeliList;                // object display list
+GLuint  BladeList;                // object display list
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
 int		DepthBufferOn;			// != 0 means to use the z-buffer
@@ -195,6 +196,7 @@ float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
 
+#include "heli.550"
 
 // function prototypes:
 
@@ -282,7 +284,6 @@ MulArray3(float factor, float a, float b, float c )
 //#include "loadobjfile.cpp"
 //#include "keytime.cpp"
 //#include "glslprogram.cpp"
-#include "heli.550"
 
 
 // main program:
@@ -439,7 +440,7 @@ Display( )
 	if( AxesOn != 0 )
 	{
 		glColor3fv( &Colors[NowColor][0] );
-		glCallList( AxesList );
+        glCallList( AxesList );
 	}
 
 	// since we are using glScalef( ), be sure the normals get unitized:
@@ -449,14 +450,16 @@ Display( )
 
 	// draw the box object by calling up its display list:
 
-	glCallList( BoxList );
+    glCallList( HeliList );
+    glCallList( BladeList );
 
 #ifdef DEMO_Z_FIGHTING
 	if( DepthFightingOn != 0 )
 	{
 		glPushMatrix( );
 			glRotatef( 90.f,   0.f, 1.f, 0.f );
-			glCallList( BoxList );
+			glCallList( HeliList );
+            glCallList( BladeList );
 		glPopMatrix( );
 	}
 #endif
@@ -829,57 +832,68 @@ InitLists( )
 
 	// create the object:
 
-	BoxList = glGenLists( 1 );
-	glNewList( BoxList, GL_COMPILE );
+    HeliList = glGenLists( 1 );
+    glNewList( HeliList, GL_COMPILE );
+    int i;
+    struct point *p0, *p1, *p2;
+    struct tri *tp;
+    float p01[3], p02[3], n[3];
 
-		glBegin( GL_QUADS );
+    glPushMatrix( );
+    glTranslatef( 0., -1., 0. );
+    glRotatef(  97.,   0., 1., 0. );
+    glRotatef( -15.,   0., 0., 1. );
+    glBegin( GL_TRIANGLES );
+        for( i=0, tp = Helitris; i < Helintris; i++, tp++ )
+        {
+            p0 = &Helipoints[ tp->p0 ];
+            p1 = &Helipoints[ tp->p1 ];
+            p2 = &Helipoints[ tp->p2 ];
 
-			glColor3f( 1., 0., 0. );
+            // fake "lighting" from above:
 
-				glNormal3f( 1., 0., 0. );
-					glVertex3f(  dx, -dy,  dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f(  dx,  dy,  dz );
+            p01[0] = p1->x - p0->x;
+            p01[1] = p1->y - p0->y;
+            p01[2] = p1->z - p0->z;
+            p02[0] = p2->x - p0->x;
+            p02[1] = p2->y - p0->y;
+            p02[2] = p2->z - p0->z;
+            Cross( p01, p02, n );
+            Unit( n, n );
+            n[1] = fabs( n[1] );
+            n[1] += .25;
+            if( n[1] > 1. )
+                n[1] = 1.;
+            glColor3f( 0., n[1], 0. );
 
-				glNormal3f(-1., 0., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f( -dx,  dy, -dz );
-					glVertex3f( -dx, -dy, -dz );
+            glVertex3f( p0->x, p0->y, p0->z );
+            glVertex3f( p1->x, p1->y, p1->z );
+            glVertex3f( p2->x, p2->y, p2->z );
+        }
+    glEnd( );
+    glPopMatrix( );
+    glEndList( );
+    
+    // blade parameters:
 
-			glColor3f( 0., 1., 0. );
+    #define BLADE_RADIUS         1.0
+    #define BLADE_WIDTH         0.4
 
-				glNormal3f(0., 1., 0.);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f(  dx,  dy,  dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f( -dx,  dy, -dz );
+    // draw the helicopter blade with radius BLADE_RADIUS and
+    //    width BLADE_WIDTH centered at (0.,0.,0.) in the XY plane
 
-				glNormal3f(0., -1., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx, -dy, -dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx, -dy,  dz );
+    BladeList = glGenLists( 1 );
+    glNewList( BladeList, GL_COMPILE );
+    glBegin( GL_TRIANGLES );
+        glVertex2f(  BLADE_RADIUS,  BLADE_WIDTH/2. );
+        glVertex2f(  0., 0. );
+        glVertex2f(  BLADE_RADIUS, -BLADE_WIDTH/2. );
 
-			glColor3f(0., 0., 1.);
-
-				glNormal3f(0., 0., 1.);
-					glVertex3f(-dx, -dy, dz);
-					glVertex3f( dx, -dy, dz);
-					glVertex3f( dx,  dy, dz);
-					glVertex3f(-dx,  dy, dz);
-
-				glNormal3f(0., 0., -1.);
-					glVertex3f(-dx, -dy, -dz);
-					glVertex3f(-dx,  dy, -dz);
-					glVertex3f( dx,  dy, -dz);
-					glVertex3f( dx, -dy, -dz);
-
-		glEnd( );
-
-	glEndList( );
-
+        glVertex2f( -BLADE_RADIUS, -BLADE_WIDTH/2. );
+        glVertex2f(  0., 0. );
+        glVertex2f( -BLADE_RADIUS,  BLADE_WIDTH/2. );
+    glEnd( );
+    glEndList( );
 
 	// create the axes:
 
