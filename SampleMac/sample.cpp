@@ -282,6 +282,7 @@ MulArray3(float factor, float a, float b, float c )
 //#include "loadobjfile.cpp"
 //#include "keytime.cpp"
 //#include "glslprogram.cpp"
+#include "heli.550"
 
 
 // main program:
