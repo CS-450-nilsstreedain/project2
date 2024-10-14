@@ -181,6 +181,7 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
+GLuint  BoxList;                // object display list
 GLuint  HeliList;                // object display list
 GLuint  BladeList;                // object display list
 int		DebugOn;				// != 0 means to print debugging info
@@ -450,8 +451,26 @@ Display( )
 
 	// draw the box object by calling up its display list:
 
+    glCallList( BoxList );
     glCallList( HeliList );
-    glCallList( BladeList );
+    
+    glPushMatrix();
+        glColor3f(1., 1., 1.);
+
+        glTranslatef(0., 2.9, -2);
+        glRotatef(3000 * Time, 0, 1, 0);
+        glRotatef(90, 1, 0, 0);
+        glScalef(5, 1, 1);
+        glCallList(BladeList);
+    glPopMatrix();
+    
+    glPushMatrix();
+        glTranslatef(.5, 2.5, 9.);
+        glRotatef(6000 * Time, 1, 0, 0);
+        glRotatef(90, 0, 1, 0);
+        glScalef(3, 1, 1);
+        glCallList(BladeList);
+    glPopMatrix();
 
 #ifdef DEMO_Z_FIGHTING
 	if( DepthFightingOn != 0 )
@@ -459,7 +478,6 @@ Display( )
 		glPushMatrix( );
 			glRotatef( 90.f,   0.f, 1.f, 0.f );
 			glCallList( HeliList );
-            glCallList( BladeList );
 		glPopMatrix( );
 	}
 #endif
@@ -831,6 +849,47 @@ InitLists( )
 	glutSetWindow( MainWindow );
 
 	// create the object:
+    
+    BoxList = glGenLists( 1 );
+    glNewList( BoxList, GL_COMPILE );
+    
+        glBegin(GL_TRIANGLES);
+            // Number of tetrahedrons per edge in the stack
+            int levels = 4;
+
+            for (int i = levels; i > 0; i--) {
+                for (int j = levels; j >= i; j--) {
+                    for (int k = levels; k >= j; k--) {
+                        float x = (j - i * 0.5) - (k * 0.5);
+                        float y = i - 1 - (levels * 0.35);
+                        float z = (k - i * 0.5) + (k * 0.2) - (levels * 0.7) - 15;
+
+                        // Base triangle
+                        glColor3f(i * 0.2, j * 0.4, k * 0.6);
+                            glVertex3f(x + 0, y + 1, z + 0);
+                            glVertex3f(x - 0.5, y + 0, z + 0.5);
+                            glVertex3f(x + 0.5, y + 0, z + 0.5);
+
+                        glColor3f(i * 0.6, j * 0.4, k * 0.2);
+                            glVertex3f(x - 0.5, y + 0, z + 0.5);
+                            glVertex3f(x + 0.5, y + 0, z + 0.5);
+                            glVertex3f(x + 0, y + 0, z - 0.7);
+
+                        glColor3f(i * 0.6, j * 0.2, k * 0.4);
+                            glVertex3f(x + 0.5, y + 0, z + 0.5);
+                            glVertex3f(x + 0, y + 0, z - 0.7);
+                            glVertex3f(x + 0, y + 1, z + 0);
+
+                        glColor3f(i * 0.4, j * 0.2, k * 0.6);
+                            glVertex3f(x + 0, y + 0, z - 0.7);
+                            glVertex3f(x + 0, y + 1, z + 0);
+                            glVertex3f(x - 0.5, y + 0, z + 0.5);
+                    }
+                }
+            }
+        glEnd( );
+
+    glEndList( );
 
     HeliList = glGenLists( 1 );
     glNewList( HeliList, GL_COMPILE );
