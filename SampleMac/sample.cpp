@@ -180,7 +180,8 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
-int		AxesOn;					// != 0 means to draw the axes
+int     ViewOn;                 // != 0 means to view from outside
+int     AxesOn;                 // != 0 means to draw the axes
 GLuint  BoxList;                // object display list
 GLuint  HeliList;                // object display list
 GLuint  BladeList;                // object display list
@@ -203,7 +204,8 @@ float	Xrot, Yrot;				// rotation angles in degrees
 
 void	Animate( );
 void	Display( );
-void	DoAxesMenu( int );
+void    DoViewMenu( int );
+void    DoAxesMenu( int );
 void	DoColorMenu( int );
 void	DoDepthBufferMenu( int );
 void	DoDepthFightingMenu( int );
@@ -407,18 +409,22 @@ Display( )
 
 	// set the eye position, look-at position, and up-vector:
 
-	gluLookAt( 0.f, 0.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
+    if( ViewOn == 0 ) {
+        gluLookAt( 10.f, 5.f, 10.f,     -2.5f, 0.f, 0.f,     0.f, 1.f, 0.f );
+        
+        // rotate the scene:
 
-	// rotate the scene:
+        glRotatef( (GLfloat)Yrot, 0.f, 1.f, 0.f );
+        glRotatef( (GLfloat)Xrot, 1.f, 0.f, 0.f );
 
-	glRotatef( (GLfloat)Yrot, 0.f, 1.f, 0.f );
-	glRotatef( (GLfloat)Xrot, 1.f, 0.f, 0.f );
+        // uniformly scale the scene:
 
-	// uniformly scale the scene:
-
-	if( Scale < MINSCALE )
-		Scale = MINSCALE;
-	glScalef( (GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale );
+        if( Scale < MINSCALE )
+            Scale = MINSCALE;
+        glScalef( (GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale );
+    } else {
+        gluLookAt( -0.4f, 1.8f, -4.9f,     -0.4f, 1.8f, -10.f,     0.f, 1.f, 0.f );
+    }
 
 	// set the fog parameters:
 
@@ -524,12 +530,22 @@ Display( )
 
 
 void
+DoViewMenu( int id )
+{
+    ViewOn = id;
+
+    glutSetWindow( MainWindow );
+    glutPostRedisplay( );
+}
+
+
+void
 DoAxesMenu( int id )
 {
-	AxesOn = id;
+    AxesOn = id;
 
-	glutSetWindow( MainWindow );
-	glutPostRedisplay( );
+    glutSetWindow( MainWindow );
+    glutPostRedisplay( );
 }
 
 
@@ -687,10 +703,14 @@ InitMenus( )
 	{
 		glutAddMenuEntry( ColorNames[i], i );
 	}
-
-	int axesmenu = glutCreateMenu( DoAxesMenu );
-	glutAddMenuEntry( "Off",  0 );
-	glutAddMenuEntry( "On",   1 );
+    
+    int viewmenu = glutCreateMenu( DoViewMenu );
+    glutAddMenuEntry( "Outside",  0 );
+    glutAddMenuEntry( "Inside",   1 );
+    
+    int axesmenu = glutCreateMenu( DoAxesMenu );
+    glutAddMenuEntry( "Off",  0 );
+    glutAddMenuEntry( "On",   1 );
 
 	int depthcuemenu = glutCreateMenu( DoDepthMenu );
 	glutAddMenuEntry( "Off",  0 );
@@ -713,7 +733,8 @@ InitMenus( )
 	glutAddMenuEntry( "Perspective",   PERSP );
 
 	int mainmenu = glutCreateMenu( DoMainMenu );
-	glutAddSubMenu(   "Axes",          axesmenu);
+    glutAddSubMenu(   "View",          viewmenu);
+    glutAddSubMenu(   "Axes",          axesmenu);
 	glutAddSubMenu(   "Axis Colors",   colormenu);
 
 #ifdef DEMO_DEPTH_BUFFER
@@ -1104,7 +1125,8 @@ void
 Reset( )
 {
 	ActiveButton = 0;
-	AxesOn = 1;
+    ViewOn = 0;
+    AxesOn = 1;
 	DebugOn = 0;
 	DepthBufferOn = 1;
 	DepthFightingOn = 0;
